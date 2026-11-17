@@ -1,0 +1,142 @@
+@page
+@model Senac.ProvaSpec.Pages.IndexModel
+@{
+    ViewData["Title"] = "Lap Time";
+}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lap Time</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <main class="page-shell">
+        <header class="page-header">
+            <div class="brand-mark" aria-hidden="true">LT</div>
+            <div>
+                <p class="eyebrow">Controle de corrida</p>
+                <h1>Lap Time</h1>
+                <p class="subtitle">Registre suas voltas e acompanhe o desempenho da prova.</p>
+            </div>
+        </header>
+
+        <section class="panel entry-panel" aria-labelledby="entry-title">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Nova volta</p>
+                    <h2 id="entry-title">Adicionar tempo</h2>
+                </div>
+                <span class="lap-counter">@Model.Laps.Count / 100 voltas</span>
+            </div>
+            <form method="post" class="lap-form">
+                <div class="input-group">
+                    <label for="Tempo">Tempo da volta</label>
+                    <input asp-for="Tempo" id="Tempo" type="text" placeholder="01:23.456"
+                           pattern="[0-5][0-9]:[0-5][0-9][.][0-9]{3}" minlength="9" maxlength="9"
+                           inputmode="decimal" autocomplete="off" required aria-describedby="format-help" />
+                    <span id="format-help" class="help-text">Formato MM:SS.mmm — por exemplo, 01:23.456.</span>
+                    <span asp-validation-for="Tempo" class="field-error"></span>
+                </div>
+                <button type="submit" class="primary-button" disabled="@(Model.Laps.Count >= 100)">Adicionar volta</button>
+            </form>
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+            @if (Model.SuccessMessage is not null)
+            {
+                <p class="success-message" role="status">@Model.SuccessMessage</p>
+            }
+        </section>
+
+        @if (Model.Statistics is { } stats)
+        {
+            <section class="stats-grid" aria-label="Estatísticas da prova">
+                <article class="panel stat-card">
+                    <p class="stat-label">Média</p>
+                    <p class="stat-value">@stats.Average</p>
+                </article>
+                <article class="panel stat-card">
+                    <p class="stat-label">Mediana</p>
+                    <p class="stat-value">@stats.Median</p>
+                </article>
+                <article class="panel stat-card">
+                    <p class="stat-label">Moda</p>
+                    @if (stats.Modes.Count == 0)
+                    {
+                        <p class="stat-value stat-note">Não houve moda.</p>
+                    }
+                    else
+                    {
+                        <p class="stat-value">@string.Join(", ", stats.Modes)</p>
+                    }
+                </article>
+                <article class="panel stat-card">
+                    <p class="stat-label">Tempo total</p>
+                    <p class="stat-value">@FormatTotal(stats.TotalMilliseconds)</p>
+                </article>
+            </section>
+        }
+        else
+        {
+            <p class="notice" role="status">
+                @if (Model.LapsNeeded == 3)
+                {
+                    <span>Adicione pelo menos 3 voltas para calcular as estatísticas.</span>
+                }
+                else
+                {
+                    <span>Adicione mais @Model.LapsNeeded volta(s) para calcular as estatísticas.</span>
+                }
+            </p>
+        }
+
+        <section class="panel laps-panel" aria-labelledby="laps-title">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Histórico</p>
+                    <h2 id="laps-title">Voltas registradas</h2>
+                </div>
+                @if (Model.Statistics is not null)
+                {
+                    <span class="fastest-key"><span class="key-dot"></span>Volta mais rápida</span>
+                }
+            </div>
+            @if (Model.Laps.Count == 0)
+            {
+                <p class="empty-state">Nenhuma volta registrada. Adicione a primeira acima.</p>
+            }
+            else
+            {
+                <ol class="lap-list">
+                    @foreach (var lap in Model.Laps)
+                    {
+                        <li class="lap-row @(lap.IsFastest ? "fastest" : string.Empty)">
+                            <span class="lap-number">Volta @lap.Number</span>
+                            <span class="lap-time">@lap.Time</span>
+                            @if (lap.IsFastest)
+                            {
+                                <span class="fastest-label">Mais rápida</span>
+                            }
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+        <footer class="page-footer">Os tempos são salvos localmente neste dispositivo.</footer>
+    </main>
+</body>
+</html>
+
+@functions {
+    private static string FormatTotal(long milliseconds)
+    {
+        var hours = milliseconds / 3_600_000;
+        var minutes = milliseconds / 60_000 % 60;
+        var seconds = milliseconds / 1_000 % 60;
+        var remainder = milliseconds % 1_000;
+
+        return hours > 0
+            ? $"{hours:00}:{minutes:00}:{seconds:00}.{remainder:000}"
+            : $"{milliseconds / 60_000:00}:{seconds:00}.{remainder:000}";
+    }
+}
